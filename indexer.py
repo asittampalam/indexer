@@ -1,15 +1,22 @@
 __author__ = 'Arun'
 
-from optparse import OptionParser
 import os
+import json
+from optparse import OptionParser
 from hashlib import md5
 
-def index(directory):
-    print("Indexing: " + directory)
-    for folder, subfolders, files in os.walk(directory):
+def index(root_directory):
+    assert os.path.isdir(root_directory)
+    index_dict = {}
+    print("Indexing: " + root_directory)
+    for folder, subfolders, files in os.walk(root_directory):
         for filename in files:
             filepath = os.path.join(folder, filename)
-            print(filepath + " MD5: " + md5(open(filepath, 'rb').read()).hexdigest())
+            rel_path = os.path.relpath(filepath, root_directory) #relative to the root directory
+            md5_hash = md5(open(filepath, 'rb').read()).hexdigest()
+            print("File: " + rel_path + "  MD5: " + md5_hash)
+            index_dict[rel_path] = md5_hash
+    print(json.dumps(index_dict))
 
 def main():
     #Parse options
@@ -24,6 +31,11 @@ def main():
 
     if not options.directory:
         options.directory = os.getcwd()
+
+    options.directory = os.path.abspath(options.directory)
+
+    if not os.path.isdir(options.directory):
+        parser.error("The directory you specified is invalid!")
 
     if options.index_mode:
         index(options.directory)
