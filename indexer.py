@@ -1,6 +1,13 @@
 __author__ = 'Arun'
 
 from optparse import OptionParser
+import os
+
+def index(directory):
+    print("Indexing: " + directory)
+    for folder, subfolders, files in os.walk(directory):
+        for filename in files:
+            print(os.path.join(folder, filename))
 
 def main():
     #Parse options
@@ -13,7 +20,11 @@ def main():
     if options.index_mode == options.analyze_mode:
         parser.error('You have to choose a mode!')
 
+    if not options.directory:
+        options.directory = os.getcwd()
 
+    if options.index_mode:
+        index(options.directory)
 
 if __name__ == '__main__':
     main()
