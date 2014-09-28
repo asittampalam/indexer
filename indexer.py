@@ -5,7 +5,6 @@ import json
 from optparse import OptionParser
 from hashlib import md5
 
-
 # Creates index (dictionary: relative filepath -> md5 hash) and returns it.
 def get_index(root_directory, quiet = True):
     assert os.path.isdir(root_directory)
@@ -37,6 +36,34 @@ def start_index_mode(root_directory):
     output_file = open(output_file_path, 'w+')
     json.dump(index_dict, output_file)
 
+# Starts with analyze mode:
+def start_analyze_mode(root_directory):
+    current_index_dict = get_index(root_directory)
+    input_file_path = os.path.join(root_directory, ".indexer", "index.json")
+    input_file = open(input_file_path, "r")
+    old_index_dict = json.load(input_file)
+
+    difference = DictDiffer(current_index_dict, old_index_dict)
+
+    print("Analyzing: ")
+
+    print(" Unchanged: ")
+    for unchanged in difference.unchanged():
+        print("  ",unchanged)
+
+    print(" Changed: ")
+    for changed in difference.changed():
+        print("  ",changed)
+
+    print(" Added: ")
+    for added in difference.added():
+        print("  ",added)
+
+    print(" Removed: ")
+    for removed in difference.removed():
+        print("  ",removed)
+
+
 def main():
     #Parse options
     parser = OptionParser()
@@ -58,6 +85,32 @@ def main():
 
     if options.index_mode:
         start_index_mode(options.directory)
+    else:
+        start_analyze_mode(options.directory)
+
+
+# Nice little class from http://stackoverflow.com/questions/1165352/fast-comparison-between-two-python-dictionary:
+# Allows efficient comparison of two dicts.
+class DictDiffer(object):
+    """
+    Calculate the difference between two dictionaries as:
+    (1) items added
+    (2) items removed
+    (3) keys same in both but changed values
+    (4) keys same in both and unchanged values
+    """
+    def __init__(self, current_dict, past_dict):
+        self.current_dict, self.past_dict = current_dict, past_dict
+        self.set_current, self.set_past = set(current_dict.keys()), set(past_dict.keys())
+        self.intersect = self.set_current.intersection(self.set_past)
+    def added(self):
+        return self.set_current - self.intersect
+    def removed(self):
+        return self.set_past - self.intersect
+    def changed(self):
+        return set(o for o in self.intersect if self.past_dict[o] != self.current_dict[o])
+    def unchanged(self):
+        return set(o for o in self.intersect if self.past_dict[o] == self.current_dict[o])
 
 if __name__ == '__main__':
     main()
