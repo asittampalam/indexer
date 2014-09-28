@@ -9,14 +9,22 @@ def index(root_directory):
     assert os.path.isdir(root_directory)
     index_dict = {}
     print("Indexing: " + root_directory)
+
     for folder, subfolders, files in os.walk(root_directory):
-        for filename in files:
-            filepath = os.path.join(folder, filename)
-            rel_path = os.path.relpath(filepath, root_directory) #relative to the root directory
-            md5_hash = md5(open(filepath, 'rb').read()).hexdigest()
-            print("File: " + rel_path + "  MD5: " + md5_hash)
-            index_dict[rel_path] = md5_hash
-    print(json.dumps(index_dict))
+        if not os.path.relpath(folder, root_directory) == '.indexer': # this is where indexer stores it's index
+            for filename in files:
+                filepath = os.path.join(folder, filename)
+                rel_path = os.path.relpath(filepath, root_directory) #relative to the root directory
+                md5_hash = md5(open(filepath, 'rb').read()).hexdigest()
+                print("File: " + rel_path + "  MD5: " + md5_hash)
+                index_dict[rel_path] = md5_hash
+
+    output_dir = os.path.join(root_directory, ".indexer")
+    if not os.path.isdir(output_dir):
+        os.makedirs(output_dir)
+    output_file_path = os.path.join(output_dir, "index.json")
+    output_file = open(output_file_path, 'w+')
+    json.dump(index_dict, output_file)
 
 def main():
     #Parse options
