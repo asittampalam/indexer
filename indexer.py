@@ -2,12 +2,14 @@ __author__ = 'Arun'
 
 from optparse import OptionParser
 import os
+from hashlib import md5
 
 def index(directory):
     print("Indexing: " + directory)
     for folder, subfolders, files in os.walk(directory):
         for filename in files:
-            print(os.path.join(folder, filename))
+            filepath = os.path.join(folder, filename)
+            print(filepath + " MD5: " + md5(open(filepath, 'rb').read()).hexdigest())
 
 def main():
     #Parse options
