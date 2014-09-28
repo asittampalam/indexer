@@ -5,10 +5,13 @@ import json
 from optparse import OptionParser
 from hashlib import md5
 
-def index(root_directory):
+
+# Creates index (dictionary: relative filepath -> md5 hash) and returns it.
+def get_index(root_directory, quiet = True):
     assert os.path.isdir(root_directory)
     index_dict = {}
-    print("Indexing: " + root_directory)
+    if not quiet:
+        print("Indexing: " + root_directory)
 
     for folder, subfolders, files in os.walk(root_directory):
         if not os.path.relpath(folder, root_directory) == '.indexer': # this is where indexer stores it's index
@@ -16,8 +19,16 @@ def index(root_directory):
                 filepath = os.path.join(folder, filename)
                 rel_path = os.path.relpath(filepath, root_directory) #relative to the root directory
                 md5_hash = md5(open(filepath, 'rb').read()).hexdigest()
-                print("File: " + rel_path + "  MD5: " + md5_hash)
+                if not quiet:
+                    print("File: " + rel_path + "  MD5: " + md5_hash)
                 index_dict[rel_path] = md5_hash
+    return index_dict
+
+# Starts index mode:
+def start_index_mode(root_directory):
+    assert os.path.isdir(root_directory)
+
+    index_dict = get_index(root_directory, False)
 
     output_dir = os.path.join(root_directory, ".indexer")
     if not os.path.isdir(output_dir):
@@ -46,7 +57,7 @@ def main():
         parser.error("The directory you specified is invalid!")
 
     if options.index_mode:
-        index(options.directory)
+        start_index_mode(options.directory)
 
 if __name__ == '__main__':
     main()
