@@ -4,11 +4,26 @@ import os
 import json
 from optparse import OptionParser
 from hashlib import md5
+from fnmatch import fnmatch
+
+# Checks for a list if there is any fnmatch.
+def fnmatch_any(fn_list, filepath):
+    for elem in fn_list:
+        if fnmatch(filepath, elem):
+            return True
+    return False
 
 # Creates index (dictionary: relative filepath -> md5 hash) and returns it.
 def get_index(root_directory, quiet = True):
     assert os.path.isdir(root_directory)
     index_dict = {}
+    ignore_file_path = os.path.join(root_directory, ".indexer", ".indexerignore")
+    if not os.path.isfile(ignore_file_path):
+        ignore_list = []
+    else:
+        ignore_file = open(ignore_file_path, "r")
+        ignore_list = ignore_file.read().splitlines()
+
     if not quiet:
         print("Indexing: " + root_directory)
 
@@ -17,10 +32,15 @@ def get_index(root_directory, quiet = True):
             for filename in files:
                 filepath = os.path.join(folder, filename)
                 rel_path = os.path.relpath(filepath, root_directory) #relative to the root directory
-                md5_hash = md5(open(filepath, 'rb').read()).hexdigest()
-                if not quiet:
-                    print("File: " + rel_path + "  MD5: " + md5_hash)
-                index_dict[rel_path] = md5_hash
+
+                if not fnmatch_any(ignore_list, rel_path):
+                    md5_hash = md5(open(filepath, 'rb').read()).hexdigest()
+                    if not quiet:
+                        print("  File: " + rel_path + "  MD5: " + md5_hash)
+                    index_dict[rel_path] = md5_hash
+                else:
+                    if not quiet:
+                        print("  Ignoring: " + rel_path)
     return index_dict
 
 # Starts index mode:
@@ -81,7 +101,7 @@ def main():
     options.directory = os.path.abspath(options.directory)
 
     if not os.path.isdir(options.directory):
-        parser.error("The directory you specified is invalid!")
+        parser.error("The directory you specified is invalid! (" + options.directory +")")
 
     if options.index_mode:
         start_index_mode(options.directory)
