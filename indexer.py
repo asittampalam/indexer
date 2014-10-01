@@ -7,7 +7,8 @@ from optparse import OptionParser
 from hashlib import md5
 from fnmatch import fnmatch
 
-# Checks for a list if there is any fnmatch.
+# Checks for a given path if there is any match in a given list.
+# "quiet" can be set to false if print output is wanted.
 def ignore_match(ignore_list, path, quiet = True):
     for elem in ignore_list:
         if fnmatch(path, elem):
@@ -16,7 +17,10 @@ def ignore_match(ignore_list, path, quiet = True):
             return True
     return False
 
-# Creates index (dictionary: relative filepath -> md5 hash) and returns it.
+# Creates index for root_directory (eg. dictionary: relative filepath -> md5 hash) and returns it.
+# "root_directory/.indexerignore is" file used to determine which folders/files to ignore.
+# Ignores must be specified relative to root_directory.
+# "quiet" can be set to false if print output is wanted.
 def get_index(root_directory, quiet = True):
     assert os.path.isdir(root_directory)
     index_dict = {}
@@ -27,7 +31,6 @@ def get_index(root_directory, quiet = True):
         ignore_file = open(ignore_file_path, "r")
         ignore_list = ignore_file.read().splitlines()
     ignore_list.append('.indexer')
-
 
     if not quiet:
         print("Indexing: " + root_directory)
@@ -45,8 +48,8 @@ def get_index(root_directory, quiet = True):
                 index_dict[rel_path] = md5_hash
     return index_dict
 
-# Starts index mode:
-def start_index_mode(root_directory):
+# Creates an index for a given root_directory and dumps its json to root_directory/.indexer/index.json
+def index_mode(root_directory):
     assert os.path.isdir(root_directory)
 
     index_dict = get_index(root_directory, False)
@@ -58,8 +61,11 @@ def start_index_mode(root_directory):
     output_file = open(output_file_path, 'w+')
     json.dump(index_dict, output_file)
 
-# Starts with analyze mode:
-def start_analyze_mode(root_directory):
+# Creates an index for a given root_directory, loads old index for that directory (root_directory/.indexer/index.json)
+# and compares both.
+def analyze_mode(root_directory):
+    assert os.path.isfile(os.path.join(root_directory, ".indexer", "index.json"))
+
     current_index_dict = get_index(root_directory)
     input_file_path = os.path.join(root_directory, ".indexer", "index.json")
     input_file = open(input_file_path, "r")
@@ -106,11 +112,13 @@ def main():
         parser.error("The directory you specified is invalid! (" + options.directory +")")
 
     if options.index_mode:
-        start_index_mode(options.directory)
+        index_mode(options.directory)
     else:
-        start_analyze_mode(options.directory)
+        if not os.path.isfile(os.path.join(options.directory, ".indexer", "index.json")):
+            parser.error("No previous versions of index detected. Please run \"indexer.py -i\" first!")
+        analyze_mode(options.directory)
 
-
+#################################################################################################################################################
 # Nice little class from http://stackoverflow.com/questions/1165352/fast-comparison-between-two-python-dictionary:
 # Allows efficient comparison of two dicts.
 class DictDiffer(object):
