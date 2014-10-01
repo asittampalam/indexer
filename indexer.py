@@ -26,24 +26,23 @@ def get_index(root_directory, quiet = True):
     else:
         ignore_file = open(ignore_file_path, "r")
         ignore_list = ignore_file.read().splitlines()
+    ignore_list.append('.indexer')
 
 
     if not quiet:
         print("Indexing: " + root_directory)
 
     for folder, subfolders, files in os.walk(root_directory, topdown=True):
+        subfolders[:] = [subfolder for subfolder in subfolders if not ignore_match(ignore_list, os.path.relpath(os.path.join(folder, subfolder), root_directory), quiet)] # pruning subfolders we don't want to walk through
+        for filename in files:
+            filepath = os.path.join(folder, filename)
+            rel_path = os.path.relpath(filepath, root_directory) #relative to the root directory
 
-        if not os.path.relpath(folder, root_directory) == '.indexer': # this is where indexer stores it's index
-            subfolders[:] = [subfolder for subfolder in subfolders if not ignore_match(ignore_list, os.path.relpath(os.path.join(folder, subfolder), root_directory), quiet)] # pruning subfolders we don't want to walk through
-            for filename in files:
-                filepath = os.path.join(folder, filename)
-                rel_path = os.path.relpath(filepath, root_directory) #relative to the root directory
-
-                if not ignore_match(ignore_list, rel_path, quiet):
-                    md5_hash = md5(open(filepath, 'rb').read()).hexdigest()
-                    if not quiet:
-                        print("  File: " + rel_path + "  MD5: " + md5_hash)
-                    index_dict[rel_path] = md5_hash
+            if not ignore_match(ignore_list, rel_path, quiet):
+                md5_hash = md5(open(filepath, 'rb').read()).hexdigest()
+                if not quiet:
+                    print("  File: " + rel_path + "  MD5: " + md5_hash)
+                index_dict[rel_path] = md5_hash
     return index_dict
 
 # Starts index mode:
